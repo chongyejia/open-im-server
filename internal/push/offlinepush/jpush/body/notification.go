@@ -15,6 +15,8 @@
 package body
 
 import (
+	"strings"
+
 	"github.com/openimsdk/open-im-server/v3/internal/push/offlinepush/options"
 	"github.com/openimsdk/open-im-server/v3/pkg/common/config"
 )
@@ -46,12 +48,16 @@ type IosAlert struct {
 	Body  string `json:"body,omitempty"`
 }
 
+type Notification3rd struct {
+	Android *Android `json:"android,omitempty"`
+	IOS     *Ios     `json:"ios,omitempty"`
+}
+
 func (n *Notification) SetAlert(alert string, title string, opts *options.Opts) {
 	n.Alert = alert
 	n.Android.Alert = alert
-	n.Android.Title = title
+	n.Android.Title = normalizeAndroidNotificationTitle(title, alert)
 	n.IOS.Alert.Body = alert
-	n.IOS.Alert.Title = title
 	n.IOS.Sound = opts.IOSPushSound
 	if opts.IOSBadgeCount {
 		n.IOS.Badge = "+1"
@@ -69,4 +75,33 @@ func (n *Notification) SetAndroidIntent(pushConf *config.Push) {
 
 func (n *Notification) IOSEnableMutableContent() {
 	n.IOS.MutableContent = true
+}
+
+func (n *Notification3rd) SetAndroid(alert string, title string, extras map[string]string, pushConf *config.Push) {
+	android := Android{
+		Alert:  alert,
+		Title:  normalizeAndroidNotificationTitle(title, alert),
+		Extras: extras,
+	}
+	android.Intent.URL = pushConf.JPush.PushIntent
+	n.Android = &android
+}
+
+func normalizeAndroidNotificationTitle(title string, alert string) string {
+	normalized := normalizeNotificationTitle(title, alert)
+	if normalized == "" {
+		return "宠业家"
+	}
+	return normalized
+}
+
+func normalizeNotificationTitle(title string, alert string) string {
+	trimmed := strings.TrimSpace(title)
+	if trimmed == "" || trimmed == strings.TrimSpace(alert) {
+		return ""
+	}
+	if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
+		return ""
+	}
+	return trimmed
 }

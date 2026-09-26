@@ -15,9 +15,14 @@
 package body
 
 type Options struct {
-	ApnsProduction bool `json:"apns_production"`
+	ApnsProduction     bool   `json:"apns_production"`
+	Notification3rdVer string `json:"notification_3rd_ver,omitempty"`
 }
 
 func (o *Options) SetApnsProduction(c bool) {
 	o.ApnsProduction = c
+}
+
+func (o *Options) SetNotification3rdV2() {
+	o.Notification3rdVer = "v2"
 }

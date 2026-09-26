@@ -15,11 +15,12 @@
 package body
 
 type PushObj struct {
-	Platform     any `json:"platform"`
-	Audience     any `json:"audience"`
-	Notification any `json:"notification,omitempty"`
-	Message      any `json:"message,omitempty"`
-	Options      any `json:"options,omitempty"`
+	Platform        any `json:"platform"`
+	Audience        any `json:"audience"`
+	Notification    any `json:"notification,omitempty"`
+	Notification3rd any `json:"notification_3rd,omitempty"`
+	Message         any `json:"message,omitempty"`
+	Options         any `json:"options,omitempty"`
 }
 
 func (p *PushObj) SetPlatform(pf *Platform) {
@@ -32,6 +33,10 @@ func (p *PushObj) SetAudience(ad *Audience) {
 
 func (p *PushObj) SetNotification(no *Notification) {
 	p.Notification = no
+}
+
+func (p *PushObj) SetNotification3rd(no *Notification3rd) {
+	p.Notification3rd = no
 }
 
 func (p *PushObj) SetMessage(m *Message) {
