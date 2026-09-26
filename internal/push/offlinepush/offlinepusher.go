@@ -17,12 +17,14 @@ package offlinepush
 import (
 	"context"
 	"github.com/openimsdk/open-im-server/v3/internal/push/offlinepush/dummy"
+	"github.com/openimsdk/open-im-server/v3/internal/push/offlinepush/emas"
 	"github.com/openimsdk/open-im-server/v3/internal/push/offlinepush/fcm"
 	"github.com/openimsdk/open-im-server/v3/internal/push/offlinepush/getui"
 	"github.com/openimsdk/open-im-server/v3/internal/push/offlinepush/jpush"
 	"github.com/openimsdk/open-im-server/v3/internal/push/offlinepush/options"
 	"github.com/openimsdk/open-im-server/v3/pkg/common/config"
 	"github.com/openimsdk/open-im-server/v3/pkg/common/storage/cache"
+	"os"
 	"strings"
 )
 
@@ -41,6 +43,8 @@ func NewOfflinePusher(pushConf *config.Push, cache cache.ThirdCache, fcmConfigPa
 	var offlinePusher OfflinePusher
 	pushConf.Enable = strings.ToLower(pushConf.Enable)
 	switch pushConf.Enable {
+	case "emas":
+		return emas.NewClient(os.Getenv("EMAS_OFFLINE_PUSH_URL"), os.Getenv("EMAS_OFFLINE_PUSH_TOKEN"))
 	case geTUI:
 		offlinePusher = getui.NewClient(pushConf, cache)
 	case firebase:

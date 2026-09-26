@@ -53,7 +53,7 @@ func (o *OfflinePushConsumerHandler) getOfflinePushInfos(msg *sdkws.MsgData) (ti
 		IsAtSelf   bool     `json:"isAtSelf"`
 	}
 
-	opts = &options.Opts{Signal: &options.Signal{ClientMsgID: msg.ClientMsgID}}
+	opts = &options.Opts{Signal: &options.Signal{ClientMsgID: msg.ClientMsgID}, SendID: msg.SendID, GroupID: msg.GroupID, SessionType: msg.SessionType}
 	if msg.OfflinePushInfo != nil {
 		opts.IOSBadgeCount = msg.OfflinePushInfo.IOSBadgeCount
 		opts.IOSPushSound = msg.OfflinePushInfo.IOSPushSound
