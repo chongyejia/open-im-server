@@ -15,6 +15,7 @@
 package discovery
 
 import (
+	"strings"
 	"time"
 
 	"github.com/openimsdk/open-im-server/v3/pkg/common/config"
@@ -35,7 +36,11 @@ func NewDiscoveryRegister(discovery *config.Discovery, watchNames []string) (dis
 		return standalone.GetSvcDiscoveryRegistry(), nil
 	}
 	if runtimeenv.RuntimeEnvironment() == config.KUBERNETES {
-		return kubernetes.NewConnManager(discovery.Kubernetes.Namespace, nil,
+		names := make([]string, len(watchNames))
+		for i, name := range watchNames {
+			names[i] = KubernetesServiceName(name)
+		}
+		return kubernetes.NewConnManager(discovery.Kubernetes.Namespace, names,
 			grpc.WithDefaultCallOptions(
 				grpc.MaxCallSendMsgSize(1024*1024*20),
 			),
@@ -54,4 +59,11 @@ func NewDiscoveryRegister(discovery *config.Discovery, watchNames []string) (dis
 	default:
 		return nil, errs.New("unsupported discovery type", "type", discovery.Enable).Wrap()
 	}
+}
+
+// KubernetesServiceName removes the resolver port suffix for Endpoints lookups.
+// GetConn accepts service:port, while GetConns and endpoint watches require a service name.
+func KubernetesServiceName(target string) string {
+	name, _, _ := strings.Cut(target, ":")
+	return name
 }

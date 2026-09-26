@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc"
 
 	conf "github.com/openimsdk/open-im-server/v3/pkg/common/config"
+	kdisc "github.com/openimsdk/open-im-server/v3/pkg/common/discovery"
 )
 
 type OnlinePusher interface {
@@ -66,7 +67,7 @@ func NewDefaultAllNode(disCov discovery.Conn, config *Config) *DefaultAllNode {
 
 func (d *DefaultAllNode) GetConnsAndOnlinePush(ctx context.Context, msg *sdkws.MsgData,
 	pushToUserIDs []string) (wsResults []*msggateway.SingleMsgToUserResults, err error) {
-	conns, err := d.disCov.GetConns(ctx, d.config.Discovery.RpcService.MessageGateway)
+	conns, err := d.gatewayConns(ctx, runtimeenv.RuntimeEnvironment())
 	if len(conns) == 0 {
 		log.ZWarn(ctx, "get gateway conn 0 ", nil)
 	} else {
@@ -211,4 +212,12 @@ func (k *K8sStaticConsistentHash) GetOnlinePushFailedUserIDs(_ context.Context, 
 		}
 	}
 	return needOfflinePushUserIDs
+}
+
+func (d *DefaultAllNode) gatewayConns(ctx context.Context, environment string) ([]grpc.ClientConnInterface, error) {
+	serviceName := d.config.Discovery.RpcService.MessageGateway
+	if environment == conf.KUBERNETES {
+		serviceName = kdisc.KubernetesServiceName(serviceName)
+	}
+	return d.disCov.GetConns(ctx, serviceName)
 }
