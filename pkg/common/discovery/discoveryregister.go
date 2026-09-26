@@ -37,12 +37,9 @@ func NewDiscoveryRegister(discovery *config.Discovery, watchNames []string) (dis
 		return standalone.GetSvcDiscoveryRegistry(), nil
 	}
 	runtimeEnvironment := runtimeenv.RuntimeEnvironment()
-	discoveryType := discovery.Enable
-	if discoveryType == "" && runtimeEnvironment == config.KUBERNETES {
-		discoveryType = config.KUBERNETES
-	}
-	if discoveryType == config.KUBERNETES && runtimeEnvironment != config.KUBERNETES {
-		return nil, errs.New("unsupported discovery type", "type", discoveryType).Wrap()
+	discoveryType, err := discoveryTypeForRuntime(discovery.Enable, runtimeEnvironment)
+	if err != nil {
+		return nil, err
 	}
 	switch discoveryType {
 	case config.KUBERNETES:
@@ -67,6 +64,18 @@ func NewDiscoveryRegister(discovery *config.Discovery, watchNames []string) (dis
 	default:
 		return nil, errs.New("unsupported discovery type", "type", discoveryType).Wrap()
 	}
+}
+
+// discoveryTypeForRuntime accepts the legacy k8s value used by existing
+// Chongyejia deployments while retaining upstream's runtime guard.
+func discoveryTypeForRuntime(configured, runtimeEnvironment string) (string, error) {
+	if configured == "k8s" || (configured == "" && runtimeEnvironment == config.KUBERNETES) {
+		configured = config.KUBERNETES
+	}
+	if configured == config.KUBERNETES && runtimeEnvironment != config.KUBERNETES {
+		return "", errs.New("unsupported discovery type", "type", configured).Wrap()
+	}
+	return configured, nil
 }
 
 // KubernetesServiceName removes the resolver port suffix for Endpoints lookups.
