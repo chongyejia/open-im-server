@@ -23,9 +23,12 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/grpc"
+
+	"github.com/openimsdk/tools/utils/stringutil"
+
 	"github.com/openimsdk/open-im-server/v3/pkg/dbbuild"
 	"github.com/openimsdk/open-im-server/v3/pkg/rpcli"
-	"google.golang.org/grpc"
 
 	"github.com/openimsdk/open-im-server/v3/pkg/authverify"
 	"github.com/openimsdk/open-im-server/v3/pkg/callbackstruct"
@@ -143,8 +146,8 @@ func (g *groupServer) NotificationUserInfoUpdate(ctx context.Context, req *pbgro
 			return nil, err
 		}
 	}
-	for _, groupID := range groupIDs {
-		g.notification.GroupMemberInfoSetNotification(ctx, groupID, req.UserID)
+	if err = g.notification.GroupMemberInfoSetNotificationBulk(ctx, groupIDs, req.NewUserInfo); err != nil {
+		log.ZError(ctx, stringutil.GetFuncName(1)+" failed", err)
 	}
 	if err = g.db.DeleteGroupMemberHash(ctx, groupIDs); err != nil {
 		return nil, err
@@ -474,6 +477,9 @@ func (g *groupServer) InviteUserToGroup(ctx context.Context, req *pbgroup.Invite
 	}
 	if err := g.setMemberJoinSeq(ctx, req.GroupID, req.InvitedUserIDs); err != nil {
 		return nil, err
+	}
+	for _, joinReq := range afterJoinGroupRequests(groupMembers, req.Reason) {
+		g.webhookAfterJoinGroup(ctx, &g.config.WebhooksConfig.AfterJoinGroup, joinReq)
 	}
 	return &pbgroup.InviteUserToGroupResp{}, nil
 }
@@ -911,6 +917,9 @@ func (g *groupServer) GroupApplicationResponse(ctx context.Context, req *pbgroup
 			if err := g.setMemberJoinSeq(ctx, req.GroupID, []string{req.FromUserID}); err != nil {
 				return nil, err
 			}
+			for _, joinReq := range afterJoinGroupRequests([]*model.GroupMember{member}, groupRequest.ReqMsg) {
+				g.webhookAfterJoinGroup(ctx, &g.config.WebhooksConfig.AfterJoinGroup, joinReq)
+			}
 		}
 	case constant.GroupResponseRefuse:
 		g.notification.GroupApplicationRejectedNotification(ctx, req)
@@ -1313,6 +1322,9 @@ func (g *groupServer) TransferGroupOwner(ctx context.Context, req *pbgroup.Trans
 }
 
 func (g *groupServer) GetGroups(ctx context.Context, req *pbgroup.GetGroupsReq) (*pbgroup.GetGroupsResp, error) {
+	if err := authverify.CheckAdmin(ctx); err != nil {
+		return nil, err
+	}
 	var (
 		group []*model.Group
 		err   error
